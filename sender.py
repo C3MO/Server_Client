@@ -3,49 +3,40 @@ import socket
 import base64
 import os
 
-args = sys.argv
+def send_message(s, filename, message):
+    """Send message using DSLP protocol"""
+    s.send(b"dslp/1.2\r\n")
+    s.send(b"peer notify\r\n")
+    s.send(str.encode(filename + "\r\n"))
+    s.send(message + b"\r\n")
+    s.send(b"dslp/end\r\n")
 
-#args = ['', '']
-#args[0] = "141.64.174.92"
-#args[1] = "text.txt"
+if __name__ == "__main__":
+    if len(sys.argv) != 3:
+        print("Usage: python sender.py <output_filename> <file_to_send>")
+        sys.exit(1)
 
-def sendMessage(message, protocol):
-    '''Send Message with given protocol (str)'''
-    s.send(str.encode(protocol + "\r\n"))
-    s.send(str.encode("peer notify\r\n"))
-    s.send(str.encode(sys.argv[1] + "\r\n"))
-    s.send(str.encode(bytes.decode(message) + "\r\n"))
-    s.send(str.encode("dslp/end\r\n"))
-
-if len(args) < 3:
-    print("Please set two command line arguments!")
-else:
-
-    adress = "dbl44.beuth-hochschule.de"
+    address = "dbl44.beuth-hochschule.de"
     port = 44444
-    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    try:
-        s.connect((adress, port))
-        print("Connect to server!")
-    except:
-        print("Can't connect to server!")
-        s.close()
-        SystemExit()
+    output_filename = sys.argv[1]
+    file_path = sys.argv[2]
 
-    file = args[2]
-    if os.path.exists(file):
-  
-        file = open(file, 'rb') 
-        file = file.read()
-        file_encode = base64.encodebytes(file)
-        print(file_encode)
-        
-        sendMessage(file_encode, "dslp/1.2")
-        print("Send file!")
-        
-        s.close()
-        SystemExit()
-    else:
-        print("Path does not exist!")
-s.close()
-SystemExit()
+    if not os.path.exists(file_path):
+        print(f"Error: File '{file_path}' not found")
+        sys.exit(1)
+
+    try:
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+            s.connect((address, port))
+            print("Connected to server!")
+            
+            with open(file_path, 'rb') as f:
+                file_data = f.read()
+                file_encoded = base64.encodebytes(file_data)
+            
+            send_message(s, output_filename, file_encoded)
+            print("File sent successfully!")
+            
+    except Exception as e:
+        print(f"Error: {e}")
+        sys.exit(1)
